@@ -2,7 +2,7 @@
 A gravity simulator built using C++ and SFML
 
 Features:
->Many Forms of Numerical integration
+Many Forms of Numerical integration
 
   >RK4
   
@@ -14,6 +14,6 @@ Features:
   
   >Symplectic Euler
   
->Trails to see the trajectory of Earth
+Trails to see the trajectory of Earth
 
->Preset with Earth's initial conditions
+Reset with Earth's initial conditions
