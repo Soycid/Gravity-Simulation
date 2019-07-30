@@ -1,0 +1,3 @@
+>Added Verlet
+>Now Outputs as CSV
+>added trails (path)

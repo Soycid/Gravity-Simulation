@@ -4,7 +4,7 @@ Add moons and other planets for more accuracy
 Add option for relativistic model?
 Figure out way to graph 
  >super trails and multiple integrators simulatanuously for visualization
- >trace EXACT solution
+ 
  >add zoom feature
  >display all metrics in units
  >mouse functionality
@@ -19,7 +19,7 @@ Figure out way to graph
 using namespace std;
 
 //config data
-string runge = "rk1";
+string runge = "verlet";
 bool trace = false;
 bool path = true;
 
@@ -35,60 +35,31 @@ const double SunY = WinY/2;
 const double G = 2.497413*pow(10,-36);
 //Mass of Sun in kg
 const double Ms = 1.989*pow(10,30);
-const double Me = 5.972*pow(10,24);
-const double Mm = 7.348*pow(10,22);
 
-
-const double scale = 300000;
-
-//Initial Position of Earh in pix (x, 0)
-//const double Xi = 147099761/scale;
-//Initial Velocity of Earh in pix/s
-//const double Vi = pow(G*Ms*(2/Xi - 1/((1.496/3)*pow(10,3))),.5);
-const double Xi = 152041481.3/scale;
-const double Yi = 0/scale;
-const double Vxi = -0/scale;
-const double Vyi = -29.29445088/scale;
-//Initial Position of Moon in pix (x, 0)
-const double mXi = 360708.9606/scale;
-const double mYi = -0/scale;
-const double mVxi = 0/scale;
-const double mVyi = 1.090492451/scale;
-
-//Initial Velocity of Moon in pix/s
-//const double mVi = pow(G*Ms*(2/Xi - 1/((1.496/3)*pow(10,3))),.5);
-
-
-
-const double stepSpeed = 1;
+//Initial Position of Sattelite in pix (x, 0)
+const double Xi = 147099761/300000;
+//Initial Velocity of Sattelite in pix/s
+const double Vi = pow(G*Ms*(2/Xi - 1/((1.496/3)*pow(10,3))),.5);
 //Step size in seconds
-const double dt = 86400/stepSpeed;
+const double dt = 86400;
 //framerate
-const int framerate = 30*stepSpeed;
+const int framerate = 30;
 const double sixth = .1666666666666666666666666666666666667;
 //defines parameters of planet
 class Planet {
 	public:
 		double posX,posY,velX,velY,r,a,ax,ay;
-		std::vector<sf::Vertex> trail;
-		double uposX = 0;
-		Planet(void) : uposY(0) {}
-		void euler_step(double SunX, double SunY,double Ms);
-		void runge_step(double SunX, double SunY);
-		void rk2_step(double SunX, double SunY);
-		void verlet_step(double SunX, double SunY);
-		void reuler_step(double SunX, double SunY);
-		
-		
-		
-		
+		void euler_step();
+		void runge_step();
+		void rk2_step();
+		void verlet_step();
 };
 //defines Euler Method to update position
-void Planet::euler_step(double X, double Y,double M){
-	r = pow(pow((posX-X),2) + pow((posY-Y),2),.5);
-	a = (G*M)/(r*r);
-	ax = a * (X - posX)/r;
-	ay = a * (Y - posY)/r;
+void Planet::euler_step(){
+	r = pow(pow((posX-SunX),2) + pow((posY-SunY),2),.5);
+	a = (G*Ms)/(r*r);
+	ax = a * (SunX - posX)/r;
+	ay = a * (SunY - posY)/r;
 	velX += (ax*dt);
 	velY += (ay*dt);
 	//cout << "vel " <<velX << " " << velY <<endl;
@@ -97,6 +68,24 @@ void Planet::euler_step(double X, double Y,double M){
 	//cout << posX << " " << posY <<endl;
 
 	
+}
+double acc(double posX,double posY,double planX, double planY){
+	double r = pow((posX-planX),2) + pow((posY-planY),2);
+	return (G*Ms)/(r);
+}
+double accX(double posX,double posY,double planX, double planY,double a){
+	double n = (posX - planX)*pow(pow((posX-planX),2) + pow((posY-planY),2),-.5);
+	return n*a;
+}
+double accY(double posX,double posY,double planX, double planY, double a){
+	double n = (posY - planY)*pow(pow((posX-planX),2) + pow((posY-planY),2),-.5);
+	return n*a;
+}
+
+
+
+double rad(double posX,double posY,double planX, double planY){
+	return pow(pow((posX-planX),2) + pow((posY-planY),2),.5);
 }
 
 //vectorize params
@@ -132,25 +121,8 @@ vector<double> vm(vector<double> a, double b){
 	z.push_back(a[0]*b);z.push_back(a[1]*b);
 	return z;
 }
-void Planet::rk2_step(double SunX, double SunY){
-	r = pow(pow((posX-SunX),2) + pow((posY-SunY),2),.5);
-	vector<double> pos; pos.push_back(posX); pos.push_back(posY); //pos x1
-	vector<double> vel; vel.push_back(velX); vel.push_back(velY); //vel x2
-	vector<double> plan; plan.push_back(SunX); plan.push_back(SunY);
-	vector<double> k11,k21,k12,k22;
-	k11 = vm(f1(pos,vel,plan),dt);
-	k21 = vm(f2(pos,vel,plan),dt);
-	k12 = vm(f1(va(pos,k11),va(vel,k21),plan),dt);
-	k22 = vm(f2(va(pos,k11),va(vel,k21),plan),dt);
 
-	pos=va(pos,vm(va(k11,k12),.5));
-	vel=va(vel,vm(va(k21,k22),.5));
-
-	posX = pos[0];posY = pos[1];
-	velX = vel[0];velY = vel[1];
-}
-
-void Planet::runge_step(double SunX, double SunY){
+void Planet::runge_step(){
 	r = pow(pow((posX-SunX),2) + pow((posY-SunY),2),.5);
 	vector<double> pos; pos.push_back(posX); pos.push_back(posY); //pos x1
 	vector<double> vel; vel.push_back(velX); vel.push_back(velY); //vel x2
@@ -173,7 +145,11 @@ void Planet::runge_step(double SunX, double SunY){
 	
 }
 
-void Planet::verlet_step(double SunX, double SunY){
+
+vector<double> posl;
+vector<double> posll;
+
+void Planet::verlet_step(){
 	r = pow(pow((posX-SunX),2) + pow((posY-SunY),2),.5);
 	vector<double> pos; pos.push_back(posX); pos.push_back(posY); //pos x1
 	vector<double> pos_new;
@@ -187,18 +163,7 @@ void Planet::verlet_step(double SunX, double SunY){
 	velX = vel[0]; velY = vel[1];
 }
 
-void Planet::reuler_step(double SunX, double SunY){
-	r = pow(pow((posX-SunX),2) + pow((posY-SunY),2),.5);
-	vector<double> pos; pos.push_back(posX); pos.push_back(posY); //pos x1
-	vector<double> vel; vel.push_back(velX); vel.push_back(velY); //vel x2
-	vector<double> plan; plan.push_back(SunX); plan.push_back(SunY);
-	
-	vel = va(vel,vm(f2(pos,vel,plan),dt));
-	pos = va(pos,vm(vel,dt));
-	
-	posX = pos[0]; posY = pos[1];
-	velX = vel[0]; velY = vel[1];
-	
+void Planet::rk2_step(){
 }
 
 
@@ -209,19 +174,9 @@ int main(){
 	//define Earth
 	Planet E;
 	E.posX = WinX/2 + Xi;
-	E.posY = WinY/2 + Yi;
-	E.velX = Vxi;
-	E.velY = Vyi;
-	
-	Planet M;
-	M.posX = WinX/2 + Xi + mXi;
-	M.posY = WinY/2 + Yi + mYi;
-	M.velX = Vxi + mVxi;
-	//M.velY = Vi + mVi;
-	M.velY = Vyi + mVyi;
-	M.velY = Vyi;
-
-	
+	E.posY = WinY/2;
+	E.velX = 0;
+	E.velY = Vi;
 	
 	//SFML Window
 	 // create the window
@@ -233,17 +188,19 @@ int main(){
 	//define sun visual
 	sf::CircleShape Sun(2*rad);
 	Sun.setFillColor(sf::Color(252, 212, 64));
-	Sun.setPosition(sf::Vector2f(SunX-2*rad,SunY-2*rad));
+	Sun.setPosition(sf::Vector2f(SunX,SunY));
 	//define earth visual
 	sf::CircleShape Earth(rad/5);
 	Earth.setFillColor(sf::Color(0, 119, 190));
-	Earth.setPosition(sf::Vector2f(SunX + Xi,SunY + Yi));
-	//define moon Visual
-	sf::CircleShape Moon(rad/8);
-	Moon.setFillColor(sf::Color(254, 252, 252));
-	Moon.setPosition(sf::Vector2f(SunX + Xi + mXi,SunY + Yi + mYi));
+	Earth.setPosition(sf::Vector2f(SunX + Xi,SunY));
 	
-
+	//make trail
+	std::vector<sf::Vertex> trail;
+	
+	
+	
+	
+	
 	//display text
 	sf::Font font;
 	
@@ -278,15 +235,6 @@ int main(){
 	text_year.setFillColor(sf::Color::White);
 	text_year.setStyle(sf::Text::Bold);
 	text_year.setPosition(sf::Vector2f(0,240));
-	//initialize energy text
-	sf::Text text_energy;
-	text_energy.setFont(font); 
-	text_energy.setString("Energy " + to_string(0));
-	text_energy.setCharacterSize(64);
-	text_energy.setFillColor(sf::Color::White);
-	text_energy.setStyle(sf::Text::Bold);
-	text_energy.setPosition(sf::Vector2f(0,320));
-	
 	
 	
 	
@@ -312,68 +260,55 @@ if (!font.loadFromFile("arial.ttf"))
 		//cout << E.posX << " "<< E.posY <<endl;
 
 		//step code
-		//if(runge == "rk1"){E.euler_step(SunX,SunY,Ms);M.euler_step(SunX,SunY,Ms);E.euler_step(M.posX,M.posY,Mm);M.euler_step(E.posX,E.posY,Me);}
-		if(runge == "rk1"){M.euler_step(SunX,SunY,0);M.euler_step(SunX,SunY,Ms);}
-		if(runge == "rk2"){E.rk2_step(SunX,SunY);}
-		if(runge == "rk4"){E.runge_step(SunX,SunY);}
-		if(runge == "reuler"){E.reuler_step(SunX,SunY);}
-		if(runge == "verlet"){E.verlet_step(SunX,SunY);}
+		if(runge == "rk1"){E.euler_step();}
+		if(runge == "rk2"){E.rk2_step();}
+		if(runge == "rk4"){E.runge_step();}
+		if(runge == "verlet"){E.verlet_step();}
 		
 		//output intit
-		cout << time << "," << time*dt/86400 << "," << E.r * scale <<"," << E.r * scale/149598000<< ","; 
+		cout << time << "," << time*dt/86400 << "," << E.r * 300000 <<"," << E.r * 300000/149598000<< ","; 
 
 		
 		time++;
-		 //energy
-		 double energy = .5*(pow(E.velX,2)+pow(E.velY,2))*Me - G*Ms*Me/(E.r*E.r);
 		 
-		 
-		
+		int pixX = (int) E.posX;
+		int pixY = (int) E.posY;
 		//trail code
 		if(path){
 			sf::Vertex vertex;
-			//changed pix to pos
-			vertex.position = sf::Vector2f(E.posX, E.posY);
+			vertex.position = sf::Vector2f(pixX, pixY);
 			vertex.color = sf::Color::Red;
-			E.trail.push_back(vertex);
+			trail.push_back(vertex);
 		}
-		//change
-		if (abs(E.posY - SunY)<1){
+		
+		if (abs(pixY - SunY)<1){
 			text_year.setString("Year Length: "+ to_string(time*dt/31536000));
 
 		}
-		Earth.setPosition(sf::Vector2f(E.posX,E.posY));
-		Moon.setPosition(sf::Vector2f(M.posX,M.posY));
-
+		Earth.setPosition(sf::Vector2f(pixX,pixY));
 		//get aphelion and perihelion
 		
 		if(E.r > aphelion){
 			aphelion = E.r;
-			cout << "aphelion,";
-			cout << energy;
+			cout << "aphelion";
 		}
 		if(E.r < perihelion){
 			perihelion = E.r;
 			cout << "perihelion";
 		}
 		//text_year.setString("Year Length: "+ to_string(time*dt/31536000));
-		text_distance.setString("Distance: " + to_string(E.r * scale) + " km (" + to_string(E.r * scale/149598000) + " AU)");
-		text_aphelion.setString("Aphelion: " + to_string(aphelion * scale) + " km ("+ to_string(aphelion * scale/149598000) + " AU)");
-		text_perihelion.setString("Perihelion: " + to_string(perihelion * scale) + " km (" + to_string(perihelion * scale/149598000) + " AU)");
-		text_energy.setString("Energy: " + to_string(energy));
+		text_distance.setString("Distance: " + to_string(E.r * 300000) + " km (" + to_string(E.r * 300000/149598000) + " AU)");
+		text_aphelion.setString("Aphelion: " + to_string(aphelion * 300000) + " km ("+ to_string(aphelion * 300000/149598000) + " AU)");
+		text_perihelion.setString("Perihelion: " + to_string(perihelion * 300000) + " km (" + to_string(perihelion * 300000/149598000) + " AU)");
 
 		
-		if(path){window.draw(&E.trail[0], E.trail.size(), sf::Lines);}
+		if(path){window.draw(&trail[0], trail.size(), sf::Lines);}
         window.draw(Sun);
-		window.draw(Earth);
-		window.draw(Moon);	
-		
+		window.draw(Earth);	
 		window.draw(text_distance);		
 		window.draw(text_aphelion);		
 		window.draw(text_perihelion);		
-		window.draw(text_year);
-		window.draw(text_energy);		
-		
+		window.draw(text_year);		
 		cout << endl;
         window.display();
     }
